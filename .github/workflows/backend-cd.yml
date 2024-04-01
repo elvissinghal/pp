@@ -98,6 +98,6 @@ jobs:
       - name: Deploy Docker Image to Amazon EKS
         working-directory: starter/backend/k8s
         run: |
-          aws eks update-kubeconfig --name udacity-project4 --region us-east-1
+          aws eks update-kubeconfig --name cluster --region us-east-1
           kustomize edit set image backend=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/backend:${GITHUB_SHA::7}
           kustomize build | kubectl apply -f -
