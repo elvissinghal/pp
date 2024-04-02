@@ -1,71 +1,90 @@
 name: Frontend Continuous Integration
 
 on:
-  workflow_dispatch:
   pull_request:
     branches:
       - main
+    paths:
+      - 'starter/frontend/**'
+  workflow_dispatch:
 
 jobs:
-  Linting:
+  lint_job:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check the Repository
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Use Node.js 18
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
-        cache: 'npm'
-        cache-dependency-path: starter/frontend/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    - name: Install Dependencies
-      working-directory: starter/frontend
-      run: npm ci
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: starter/frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('starter/frontend/package-lock.json') }}
 
-    - name: Checkout Run Lint
-      run: cd starter/frontend && npm run lint
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: starter/frontend
 
-  Test:
+      - name: Run Lint
+        run: npm run lint
+        working-directory: starter/frontend
+
+  test_job:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check the Repository
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Use Node.js 18
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
-        cache: 'npm'
-        cache-dependency-path: starter/frontend/package-lock.json
-    - name: Install Dependencies
-      working-directory: starter/frontend
-      run: npm ci
-  
-    - name: Test
-      run: cd starter/frontend && npm run test
-      
-  Build:
-    needs: [Linting, Test]
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: starter/frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('starter/frontend/package-lock.json') }}
+
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: starter/frontend
+
+      - name: Run Tests
+        run: npm test
+        working-directory: starter/frontend
+
+  build_job:
     runs-on: ubuntu-latest
-    
+    needs: [lint_job, test_job]
+
     steps:
-    - name: Check the Repository
-      uses: actions/checkout@v3
-    
-    - name: Use Node.js 18
-      uses: actions/setup-node@v3
-      with:
-        node-version: latest
-        cache: 'npm'
-        cache-dependency-path: starter/frontend/package-lock.json
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Build and Run Docker Image
-      run: |
-        cd starter/frontend
-        docker build --build-arg=REACT_APP_MOVIE_API_URL=http://localhost:5000 --tag=mp-frontend:latest .
-        docker run --name mp-frontend -p 3000:3000 -d mp-frontend
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: starter/frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('starter/frontend/package-lock.json') }}
+
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: starter/frontend
+
+      - name: Build Docker Image
+        run: |
+          docker build -t frontend-app:${{ github.sha }} -f Dockerfile .
+        working-directory: starter/frontend
